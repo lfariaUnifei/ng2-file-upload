@@ -8,7 +8,7 @@ export class FileItem {
   public url: string = '/';
   public method: string;
   public headers: any = [];
-  public withCredentials: boolean = true;
+  public withCredentials: boolean = false;
   public formData: any = [];
   public isReady: boolean = false;
   public isUploading: boolean = false;
@@ -16,6 +16,8 @@ export class FileItem {
   public isSuccess: boolean = false;
   public isCancel: boolean = false;
   public isError: boolean = false;
+  public isPause: boolean = false;
+  public bytesSent: any;
   public progress: number = 0;
   public index: number = void 0;
   public _xhr: XMLHttpRequest;
@@ -32,10 +34,11 @@ export class FileItem {
     this.file = new FileLikeObject(some);
     this._file = some;
     if (uploader.options) {
-      this.method = uploader.options.method || 'POST';
-      this.alias = uploader.options.itemAlias || 'file';
+      this.method = this.options.method || uploader.options.method || 'POST';
+      this.alias = this.options.itemAlias || uploader.options.itemAlias || 'file';
     }
-    this.url = uploader.options.url;
+    this.withCredentials = this.options.withCredentials || uploader.options.url;
+    this.url = this.options.url || uploader.options.url;
   }
 
   public upload(): void {
@@ -83,6 +86,10 @@ export class FileItem {
     return { response, status, headers };
   }
 
+  public onPause(response: string, status: number, headers: ParsedResponseHeaders): any {
+    return { response, status, headers };
+  }
+
   public _onBeforeUpload(): void {
     this.isReady = true;
     this.isUploading = true;
@@ -90,7 +97,7 @@ export class FileItem {
     this.isSuccess = false;
     this.isCancel = false;
     this.isError = false;
-    this.progress = 0;
+    this.isPause = false;
     this.onBeforeUpload();
   }
 
@@ -98,8 +105,9 @@ export class FileItem {
     this.onBuildForm(form);
   }
 
-  public _onProgress(progress: number): void {
+  public _onProgress(progress: number, bytesSent: any): void {
     this.progress = progress;
+    this.bytesSent = bytesSent;
     this.onProgress(progress);
   }
 
@@ -112,6 +120,8 @@ export class FileItem {
     this.isError = false;
     this.progress = 100;
     this.index = void 0;
+    this.isPause = false;
+    this.bytesSent = this._file.size;
     this.onSuccess(response, status, headers);
   }
 
@@ -124,6 +134,8 @@ export class FileItem {
     this.isError = true;
     this.progress = 0;
     this.index = void 0;
+    this.isPause = false;
+    this.bytesSent = 0;
     this.onError(response, status, headers);
   }
 
@@ -134,9 +146,23 @@ export class FileItem {
     this.isSuccess = false;
     this.isCancel = true;
     this.isError = false;
+    this.index = void 0;
+    this.isPause = false;
+    this.bytesSent = 0;
+    this.onCancel(response, status, headers);
+  }
+
+  public _onPause(response: string, status: number, headers: ParsedResponseHeaders): void {
+    this.isReady = false;
+    this.isUploading = false;
+    this.isUploaded = false;
+    this.isSuccess = false;
+    this.isCancel = false;
+    this.isError = false;
     this.progress = 0;
     this.index = void 0;
-    this.onCancel(response, status, headers);
+    this.isPause = true;
+    this.onPause(response, status, headers);
   }
 
   public _onComplete(response: string, status: number, headers: ParsedResponseHeaders): void {

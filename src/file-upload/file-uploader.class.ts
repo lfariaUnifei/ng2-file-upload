@@ -39,6 +39,7 @@ export interface FileUploaderOptions {
   parametersBeforeFiles?: boolean;
   formatDataFunction?: Function;
   formatDataFunctionIsAsync?: boolean;
+  withCredentials: boolean;
 }
 
 export class FileUploader {
@@ -69,7 +70,7 @@ export class FileUploader {
     this.response = new EventEmitter<any>();
   }
 
-  public setOptions(options: FileUploaderOptions): void {
+  public setOptions(options: FileUploaderOptions, override: boolean = true): void {
     this.options = Object.assign(this.options, options);
 
     this.authToken = this.options.authToken;
@@ -88,13 +89,14 @@ export class FileUploader {
     if (this.options.allowedMimeType) {
       this.options.filters.unshift({ name: 'mimeType', fn: this._mimeTypeFilter });
     }
-
-    for (let i = 0; i < this.queue.length; i++) {
-      this.queue[ i ].url = this.options.url;
+    if(override) {
+      for (let i = 0; i < this.queue.length; i++) {
+        this.queue[i].url = this.options.url;
+      }
     }
   }
 
-  public addToQueue(files: File[], options?: FileUploaderOptions, filters?: FilterFunction[] | string): void {
+  public addToQueue(files: File[], options?: FileUploaderOptions, filters?: FilterFunction[] | string): FileItem[] {
     let list: File[] = [];
     for (let file of files) {
       list.push(file);
@@ -126,6 +128,7 @@ export class FileUploader {
     if (this.options.autoUpload) {
       this.uploadAll();
     }
+    return addedFileItems;
   }
 
   public removeFromQueue(value: FileItem): void {
@@ -334,7 +337,7 @@ export class FileUploader {
 
     xhr.upload.onprogress = (event: any) => {
       let progress = Math.round(event.lengthComputable ? event.loaded * 100 / event.total : 0);
-      this._onProgressItem(item, progress);
+      this._onProgressItem(item, progress, event.loaded);
     };
     xhr.onload = () => {
       let headers = this._parseHeaders(xhr.getAllResponseHeaders());
@@ -371,11 +374,11 @@ export class FileUploader {
     if (this.authToken) {
       xhr.setRequestHeader(this.authTokenHeader, this.authToken);
     }
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState == XMLHttpRequest.DONE) {
-        that.response.emit(xhr.responseText)
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === XMLHttpRequest.DONE) {
+        that.response.emit(xhr.responseText);
       }
-    }
+    };
     if (this.options.formatDataFunctionIsAsync) {
       sendable.then(
         (result: any) => xhr.send(JSON.stringify(result))
@@ -477,10 +480,10 @@ export class FileUploader {
     this.onBuildItemForm(item, form);
   }
 
-  protected _onProgressItem(item: FileItem, progress: any): void {
+  protected _onProgressItem(item: FileItem, progress: any, bytesSent: any): void {
     let total = this._getTotalProgress(progress);
     this.progress = total;
-    item._onProgress(progress);
+    item._onProgress(progress, bytesSent);
     this.onProgressItem(item, progress);
     this.onProgressAll(total);
     this._render();
