@@ -37,7 +37,7 @@ export class FileItem {
       this.method = this.options.method || uploader.options.method || 'POST';
       this.alias = this.options.itemAlias || uploader.options.itemAlias || 'file';
     }
-    this.withCredentials = this.options.withCredentials || uploader.options.url;
+    this.withCredentials = this.options.withCredentials || uploader.options.withCredentials;
     this.url = this.options.url || uploader.options.url;
   }
 

@@ -39,7 +39,7 @@ export interface FileUploaderOptions {
   parametersBeforeFiles?: boolean;
   formatDataFunction?: Function;
   formatDataFunctionIsAsync?: boolean;
-  withCredentials: boolean;
+  withCredentials?: boolean;
 }
 
 export class FileUploader {
